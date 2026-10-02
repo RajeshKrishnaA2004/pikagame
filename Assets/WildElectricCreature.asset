@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b961c6c7cf928ab448a69970a086ba9c, type: 3}
+  m_Name: WildElectricCreature
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureData
+  creatureName: Pipapu
+  type: 2
+  battleSprite: {fileID: 5820286478268577726, guid: d0d3b6a4805ee9c41a2be80a1c70cbc9, type: 3}
+  maxHP: 100
+  typeAttackDamage: 25
+  normalAttackDamage: 15

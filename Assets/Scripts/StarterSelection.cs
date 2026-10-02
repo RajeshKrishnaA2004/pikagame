@@ -72,6 +72,7 @@ public class StarterSelection : MonoBehaviour
         string weakness = GetWeakness(type);
 
         PlayerPrefs.SetString("StarterCreature", name);
+        PlayerPrefs.SetString("StarterType", type);
         PlayerPrefs.Save();
 
         foreach (Button button in creatureButtons)
