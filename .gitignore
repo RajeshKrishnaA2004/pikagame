@@ -31,3 +31,27 @@ Thumbs.db
 unity_*.log
 test-results*.xml
 /results.xml
+b.log
+v.log
+cs.txt
+c.txt
+r.txt
+f.txt
+o.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Unity generated - never commit
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Mm]emoryProfiler/
+/[Uu]ser[Ss]ettings/
+*.tmp
+*.bak

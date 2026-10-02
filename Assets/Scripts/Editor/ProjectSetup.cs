@@ -418,14 +418,15 @@ public static class ProjectSetup
         rb.bodyType = RigidbodyType2D.Static;
         rb.gravityScale = 0f;
 
+        // The operation belongs on the source TilemapCollider2D. The composite
+        // is the receiver and cannot itself be composited.
+        var col = blockGo.AddComponent<TilemapCollider2D>();
+        col.offset = Vector2.zero;
+
         var composite = blockGo.AddComponent<CompositeCollider2D>();
         composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
-        composite.usedByComposite = false;
         composite.edgeRadius = 0f;
-
-        var col = blockGo.AddComponent<TilemapCollider2D>();
-        col.usedByComposite = true;
-        col.offset = Vector2.zero;
+        col.compositeOperation = Collider2D.CompositeOperation.Merge;
         // Each Blocker Tile carries Tile.ColliderType.Sprite (see MakeTile), so
         // a solid square of collider geometry is generated per blocked cell.
 
@@ -833,8 +834,13 @@ public static class ProjectSetup
         hud.dialogue.bodyText = hud.bodyText;
         hud.dialogue.speakerText = hud.speakerText;
         hud.dialogue.canvasGroup = hud.dialogueGroup;
-        hud.dialogue.defaultDuration = 3f;
-        hud.dialogue.queueMessages = false;
+
+        // The box is now advance-driven, not timed: there is no defaultDuration
+        // and no queueMessages toggle. queueMessages was only ever false here, so
+        // dropping it is behaviour-preserving; lines simply queue in order.
+        hud.dialogue.charsPerSecond = 40f;
+        // hud.dialogue.nextArrow is left null - this legacy HUD has no arrow
+        // prefab. DialogueSystem guards it and simply skips the bob.
 
         return hud;
     }
@@ -1354,7 +1360,8 @@ public static class ProjectSetup
             var comp = blockers.GetComponent<CompositeCollider2D>();
             var tcol = blockers.GetComponent<TilemapCollider2D>();
             Check("CompositeCollider2D present", comp != null);
-            Check("TilemapCollider2D wired to composite", tcol != null && tcol.usedByComposite);
+            Check("TilemapCollider2D wired to composite",
+                  tcol != null && tcol.compositeOperation != Collider2D.CompositeOperation.None);
             var brb = blockers.GetComponent<Rigidbody2D>();
             Check("Blockers body static",
                   brb != null && brb.bodyType == RigidbodyType2D.Static);

@@ -104,15 +104,93 @@ public class GridPlayerController : MonoBehaviour
             return;
         }
 
-    private void TryStep(Vector2Int dir)
+        if (frozen)
+            return;
+
+        if (turnCooldown > 0f)
+            turnCooldown -= Time.deltaTime;
+
+        Vector2Int dir = Dominant(GameInput.Move);
+        if (dir == Vector2Int.zero)
+        {
+            Diagnose("no input");
+            return;
+        }
+
+        int want = FaceIndexOf(dir);
+
+        // Turn in place FIRST: a new direction only changes facing here, and a
+        // step is not allowed until turnDelay has elapsed on the matching face.
+        if (want != FacingIndex)
+        {
+            FacingIndex = want;
+            turnCooldown = turnDelay;
+            Diagnose("turning to face " + dir + " (turnDelay)");
+            return;
+        }
+
+        if (turnCooldown > 0f)
+        {
+            Diagnose("waiting out turnDelay");
+            return;
+        }
+
+        if (!TryStep(dir))
+            Diagnose("step into " + (Cell + dir) + " refused"
+                     + (map != null && map.IsBlocked(Cell + dir) ? " [map blocked]" : "")
+                     + (BlockedByCollider(Cell + dir) ? " [collider]" : ""));
+        else
+            Diagnose(null);
+    }
+
+    /// <summary>
+    /// Temporary self-diagnosis: prints WHY a held direction produced no step,
+    /// once a second. Movement bugs in a grid game are otherwise invisible - the
+    /// player just stands there and nothing in the log says why.
+    /// </summary>
+    public static bool debugMovement = true;
+    private static float nextDiag;
+    private static string lastReason = "";
+
+    private void Diagnose(string reason)
+    {
+        if (!debugMovement)
+            return;
+
+        if (reason == null)
+        {
+            lastReason = "";
+            return;
+        }
+
+        if (reason == lastReason && Time.unscaledTime < nextDiag)
+            return;
+
+        lastReason = reason;
+        nextDiag = Time.unscaledTime + 1f;
+
+        string why = reason;
+        if (IsMoving)
+            why = "already mid-step";
+        else if (frozen)
+            why = "FROZEN (dialogue or cutscene)";
+
+        Debug.Log("[Move] cell=" + Cell + " facing=" + FacingIndex
+                  + " input=" + GameInput.Move
+                  + " mapWired=" + (map != null)
+                  + " -> " + why);
+    }
+
+    /// <summary>Returns false when the target cell is blocked for any reason.</summary>
+    private bool TryStep(Vector2Int dir)
     {
         Vector2Int target = Cell + dir;
 
         if (map != null && map.IsBlocked(target))
-            return;
+            return false;
 
         if (BlockedByCollider(target))
-            return;
+            return false;
 
         stepFrom = transform.position;
         stepTo = new Vector3(target.x + 0.5f, target.y, 0f);
@@ -120,6 +198,7 @@ public class GridPlayerController : MonoBehaviour
         StepProgress = 0f;
         Cell = target;
         IsMoving = true;
+        return true;
     }
 
     private void AdvanceStep()
@@ -182,31 +261,3 @@ public class GridPlayerController : MonoBehaviour
         transform.position = new Vector3(cell.x + 0.5f, cell.y, 0f);
     }
 }
-
-
-        if (frozen)
-            return;
-
-        if (turnCooldown > 0f)
-            turnCooldown -= Time.deltaTime;
-
-        Vector2Int dir = Dominant(GameInput.Move);
-        if (dir == Vector2Int.zero)
-            return;
-
-        int want = FaceIndexOf(dir);
-
-        // Turn in place FIRST: a new direction only changes facing here, and a
-        // step is not allowed until turnDelay has elapsed on the matching face.
-        if (want != FacingIndex)
-        {
-            FacingIndex = want;
-            turnCooldown = turnDelay;
-            return;
-        }
-
-        if (turnCooldown > 0f)
-            return;
-
-        TryStep(dir);
-    }

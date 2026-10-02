@@ -1,16 +1,22 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Lightweight overworld message box used by gates, regions and pickups.
+/// Bottom-screen dialogue box for Borrowed Time.
 ///
-/// Deliberately separate from the Lab's <see cref="DialogueManager"/> (which
-/// drives the starter-choosing conversation and changes scenes). This one is a
-/// non-blocking toast/queue any world script can push text into without caring
-/// whether a dialogue UI exists -- with no panel assigned it logs instead.
+/// Replaces the old timed toast: lines now stay until the player advances them,
+/// and the box freezes the player while it is open. Typed out at
+/// <see cref="charsPerSecond"/>.
+///
+/// Confirm while typing finishes the current line instantly; a second Confirm
+/// advances to the next queued line. There is deliberately NO fade-out - a
+/// conversation ends when the queue empties, not on a timer.
+///
+/// Kept separate from the Lab's legacy DialogueManager, which is still wired
+/// into the old starter scene and drives a scene change.
 /// </summary>
 public class DialogueSystem : MonoBehaviour
 {
@@ -19,36 +25,48 @@ public class DialogueSystem : MonoBehaviour
     [Header("UI")]
     public GameObject panel;
     public TMP_Text bodyText;
-    [Tooltip("Optional speaker line drawn above the body.")]
+
+    [Tooltip("Speaker name line. Hidden when the current line has no speaker.")]
     public TMP_Text speakerText;
+
+    [Tooltip("The little arrow that bobs when more lines are queued.")]
+    public RectTransform nextArrow;
+
     public CanvasGroup canvasGroup;
 
     [Header("Behaviour")]
-    [Tooltip("Default seconds a message stays on screen. 0 = stay until replaced.")]
-    public float defaultDuration = 3f;
-    public float fadeInTime = 0.12f;
-    public float fadeOutTime = 0.25f;
-    [Tooltip("Queue messages instead of overwriting the current one.")]
-    public bool queueMessages = false;
+    [Tooltip("Typewriter speed. 40 reads as a brisk, readable RPG pace.")]
+    public float charsPerSecond = 40f;
 
-    [Tooltip("Play a short blip whenever a message appears.")]
+    [Tooltip("Seconds for one full up/down bob cycle of the next arrow.")]
+    public float arrowBobPeriod = 0.9f;
+
+    [Tooltip("Pixels the arrow travels between bob extremes.")]
+    public float arrowBobPixels = 6f;
+
+    [Header("Audio (optional)")]
     public AudioSource blipSource;
     public AudioClip blipClip;
 
-    private readonly Queue<Message> pending = new Queue<Message>();
-    private Message current;
-    private Coroutine routine;
-    private bool showing;
-
-    private struct Message
+    private struct Line
     {
         public string speaker;
         public string body;
-        public float duration;
         public Action onComplete;
     }
 
-    public bool IsVisible { get { return showing; } }
+    private readonly Queue<Line> pending = new Queue<Line>();
+    private Line current;
+    private Coroutine routine;
+    private bool showing;
+    private bool typing;
+    private int charsShown;
+    private Vector2 arrowHome;
+    private bool arrowHomeCaptured;
+
+    public bool IsOpen { get { return showing; } }
+
+    public bool IsTyping { get { return typing; } }
 
     void Awake()
     {
@@ -61,10 +79,14 @@ public class DialogueSystem : MonoBehaviour
 
         if (canvasGroup == null && panel != null)
             canvasGroup = panel.GetComponent<CanvasGroup>();
-        if (canvasGroup != null)
-            canvasGroup.alpha = 0f;
-        if (panel != null)
-            panel.SetActive(false);
+
+        if (nextArrow != null && !arrowHomeCaptured)
+        {
+            arrowHome = nextArrow.anchoredPosition;
+            arrowHomeCaptured = true;
+        }
+
+        Hide();
     }
 
     void OnDestroy()
@@ -73,59 +95,106 @@ public class DialogueSystem : MonoBehaviour
             Instance = null;
     }
 
-    /// <summary>Show a one-shot line, replacing whatever is on screen.</summary>
-    public void ShowMessage(string body, float duration = -1f, Action onComplete = null)
+    void Update()
     {
-        ShowMessage(null, body, duration, onComplete);
+        UpdateArrow();
+
+        if (!showing)
+            return;
+        if (!GameInput.ConfirmPressed)
+            return;
+
+        if (typing)
+        {
+            FinishTyping();
+            return;
+        }
+
+        Advance();
     }
 
-    /// <summary>Show a line attributed to a speaker.</summary>
-    public void ShowMessage(string speaker, string body, float duration = -1f,
-                            Action onComplete = null)
+    public void ShowLine(string body)
+    {
+        ShowLine(null, body, null);
+    }
+
+    public void ShowLine(string speaker, string body, Action onComplete = null)
     {
         if (string.IsNullOrEmpty(body))
             return;
 
-        var msg = new Message
-        {
-            speaker = speaker,
-            body = body,
-            duration = duration < 0f ? defaultDuration : duration,
-            onComplete = onComplete
-        };
-
-        if (queueMessages || !showing)
-        {
-            pending.Enqueue(msg);
-            if (routine == null)
-                routine = StartCoroutine(Pump());
-        }
-        else
-        {
-            // Interrupt so gameplay feedback is never queued behind itself.
-            pending.Clear();
-            pending.Enqueue(msg);
-            if (routine != null)
-                StopCoroutine(routine);
+        pending.Enqueue(new Line { speaker = speaker, body = body, onComplete = onComplete });
+        if (routine == null)
             routine = StartCoroutine(Pump());
-        }
     }
 
-    /// <summary>Hide immediately and drop anything queued.</summary>
+    public int ShowConversation(string speaker, IEnumerable<string> lines,
+                                Action onComplete = null)
+    {
+        if (lines == null)
+            return 0;
+
+        int n = 0;
+        foreach (string s in lines)
+        {
+            if (string.IsNullOrEmpty(s))
+                continue;
+            ShowLine(speaker, s);
+            n++;
+        }
+
+        if (onComplete != null)
+            pending.Enqueue(new Line { speaker = speaker, body = string.Empty,
+                                        onComplete = onComplete });
+
+        return n;
+    }
+
+    public void ShowMessage(string body, float duration = -1f, Action onComplete = null)
+    {
+        ShowLine(null, body, onComplete);
+    }
+
+    public void ShowMessage(string speaker, string body, float duration = -1f,
+                            Action onComplete = null)
+    {
+        ShowLine(speaker, body, onComplete);
+    }
+
     public void Clear()
     {
-        pending.Clear();
         if (routine != null)
         {
             StopCoroutine(routine);
             routine = null;
         }
-        current = default(Message);
-        if (canvasGroup != null)
-            canvasGroup.alpha = 0f;
-        if (panel != null)
-            panel.SetActive(false);
-        showing = false;
+        pending.Clear();
+        current = default(Line);
+        typing = false;
+        charsShown = 0;
+        Hide();
+    }
+
+    public void Advance()
+    {
+        if (current.onComplete != null)
+        {
+            Action cb = current.onComplete;
+            current.onComplete = null;
+            cb();
+        }
+
+        if (pending.Count > 0)
+        {
+            current = default(Line);
+            typing = false;
+            if (routine == null)
+                routine = StartCoroutine(Pump());
+        }
+        else
+        {
+            Hide();
+        }
     }
 
     private IEnumerator Pump()
@@ -138,70 +207,123 @@ public class DialogueSystem : MonoBehaviour
         routine = null;
     }
 
-    private IEnumerator Present(Message msg)
+    private IEnumerator Present(Line line)
     {
-        if (bodyText == null && panel == null)
+        bool hasUI = bodyText != null || panel != null;
+
+        if (!hasUI)
         {
-            Debug.Log("[Dialogue] " + msg.body);
-            if (msg.onComplete != null)
-                msg.onComplete();
+            Debug.Log("[Dialogue] " + line.speaker + ": " + line.body);
+            if (line.onComplete != null)
+                line.onComplete();
             yield break;
         }
 
-        if (panel != null)
-            panel.SetActive(true);
-        if (bodyText != null)
-            bodyText.text = msg.body;
+        Show();
+        FreezePlayer(true);
+
         if (speakerText != null)
         {
-            bool hasSpeaker = !string.IsNullOrEmpty(msg.speaker);
+            bool hasSpeaker = !string.IsNullOrEmpty(line.speaker);
             speakerText.gameObject.SetActive(hasSpeaker);
             if (hasSpeaker)
-                speakerText.text = msg.speaker;
+                speakerText.text = line.speaker;
         }
 
         if (blipSource != null && blipClip != null)
             blipSource.PlayOneShot(blipClip);
 
-        showing = true;
-        yield return Fade(0f, 1f, fadeInTime);
+        typing = true;
+        charsShown = 0;
+        if (bodyText != null)
+            bodyText.text = "";
 
-        if (msg.duration > 0f)
-            yield return new WaitForSeconds(msg.duration);
-        else
-            while (pending.Count == 0)
-                yield return null;
+        string body = line.body ?? "";
+        while (charsShown < body.Length && typing)
+        {
+            charsShown++;
+            if (bodyText != null)
+                bodyText.text = body.Substring(0, charsShown);
 
-        yield return Fade(canvasGroup != null ? canvasGroup.alpha : 1f, 0f, fadeOutTime);
+            yield return new WaitForSeconds(1f / Mathf.Max(1f, charsPerSecond));
+        }
 
-        if (panel != null)
-            panel.SetActive(false);
-        showing = false;
-
-        if (msg.onComplete != null)
-            msg.onComplete();
+        if (bodyText != null)
+            bodyText.text = body;
+        typing = false;
     }
 
-    private IEnumerator Fade(float from, float to, float time)
+    public void FinishTyping()
     {
-        if (canvasGroup == null && panel != null)
-            canvasGroup = panel.GetComponent<CanvasGroup>();
+        if (!typing)
+            return;
 
-        if (canvasGroup == null || time <= 0f)
+        typing = false;
+        if (bodyText != null)
+            bodyText.text = current.body ?? "";
+
+        if (routine != null)
         {
-            if (canvasGroup != null)
-                canvasGroup.alpha = to;
-            yield return null;
-            yield break;
+            StopCoroutine(routine);
+            routine = null;
+        }
+    }
+
+    private void UpdateArrow()
+    {
+        if (nextArrow == null)
+            return;
+
+        bool visible = showing && !typing && pending.Count > 0;
+        if (nextArrow.gameObject.activeSelf != visible)
+            nextArrow.gameObject.SetActive(visible);
+        if (!visible)
+            return;
+
+        if (!arrowHomeCaptured)
+        {
+            arrowHome = nextArrow.anchoredPosition;
+            arrowHomeCaptured = true;
         }
 
-        float t = 0f;
-        while (t < time)
+        float period = Mathf.Max(0.05f, arrowBobPeriod);
+        float t = (Mathf.Sin(Time.unscaledTime * (Mathf.PI * 2f / period)) + 1f) * 0.5f;
+        Vector2 p = arrowHome;
+        p.y -= Mathf.Lerp(0f, arrowBobPixels, t);
+        nextArrow.anchoredPosition = p;
+    }
+
+    private void Show()
+    {
+        showing = true;
+        if (panel != null)
+            panel.SetActive(true);
+        if (canvasGroup != null)
         {
-            t += Time.unscaledDeltaTime;
-            canvasGroup.alpha = Mathf.Lerp(from, to, Mathf.Clamp01(t / time));
-            yield return null;
+            canvasGroup.alpha = 1f;
+            canvasGroup.blocksRaycasts = true;
         }
-        canvasGroup.alpha = to;
+    }
+
+    private void Hide()
+    {
+        showing = false;
+        if (canvasGroup != null)
+            canvasGroup.alpha = 0f;
+        if (panel != null)
+            panel.SetActive(false);
+        if (nextArrow != null)
+            nextArrow.gameObject.SetActive(false);
+        if (speakerText != null)
+            speakerText.gameObject.SetActive(false);
+
+        FreezePlayer(false);
+    }
+
+    private static void FreezePlayer(bool frozen)
+    {
+        var player = GridPlayerController.Instance;
+        if (player != null)
+            player.frozen = frozen;
     }
 }

@@ -13,8 +13,10 @@ using UnityEngine;
 /// Scope: ONLY <c>Assets/Art/_Mine/Sprites</c>. Nothing else is touched, and
 /// <c>ProjectSetup.ApplyImportSettings</c> skips this folder.
 ///
-/// PPU is 64 everywhere so that a 64x64 tile occupies exactly 1 Unity unit.
-/// That is a fixed design decision - do not change it per-folder.
+/// PPU is 64 for everything so a 64x64 tile is exactly 1 Unity unit - that is a
+/// fixed design decision. The ONE exception is the Trees folder, which is 96 so
+/// a canopy is about one tile wide instead of three; at 64 the trees merged
+/// into a solid mass along the border.
 /// </summary>
 public static class PixelArtImporter
 {
@@ -22,6 +24,17 @@ public static class PixelArtImporter
 
     /// <summary>Fixed: 64 px = 1 world unit = 1 tile.</summary>
     public const float PixelsPerUnit = 64f;
+
+    /// <summary>Trees only: 96 px = 1 world unit, so canopies stay ~1-2 tiles wide.</summary>
+    public const float TreePixelsPerUnit = 96f;
+
+    /// <summary>PPU for a folder, given its path with forward slashes.</summary>
+    public static float PixelsPerUnitFor(string directory)
+    {
+        return directory.EndsWith("/Environment/Trees")
+            ? TreePixelsPerUnit
+            : PixelsPerUnit;
+    }
 
     private const int MaxTextureSize = 2048;
 
@@ -41,7 +54,7 @@ public static class PixelArtImporter
         }
 
         string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { PackRoot });
-        int changed = 0, failed = 0;
+        int changed = 0, unchanged = 0, failed = 0;
 
         foreach (string guid in guids)
         {
@@ -53,14 +66,50 @@ public static class PixelArtImporter
                 continue;
             }
 
+            // Only reimport when a setting actually differs. SaveAndReimport()
+            // DESTROYS the Sprite object, so reimporting unchanged textures
+            // invalidates every Sprite reference for the rest of the editor
+            // session - which made the next LoadAssetAtPath<Sprite> return null
+            // and silently produced an empty Ground tilemap.
+            if (ProfileMatches(path, importer))
+            {
+                unchanged++;
+                continue;
+            }
+
             ApplyProfile(path, importer);
             importer.SaveAndReimport();
             changed++;
         }
 
         Debug.Log(string.Format(
-            "[BorrowedTime] art pack imported: {0} textures ({1} failed) from {2}",
-            changed, failed, PackRoot));
+            "[BorrowedTime] art pack: {0} reimported, {1} already correct, {2} failed, from {3}",
+            changed, unchanged, failed, PackRoot));
+    }
+
+    /// <summary>
+    /// True when the importer already carries the profile we want. Compared
+    /// against the REAL settings (not a version stamp) so changing the profile
+    /// automatically forces a reimport.
+    /// </summary>
+    private static bool ProfileMatches(string path, TextureImporter importer)
+    {
+        string dir = Path.GetDirectoryName(path).Replace('\\', '/');
+        string file = Path.GetFileName(path);
+
+        return importer.textureType == TextureImporterType.Sprite
+            && importer.spriteImportMode == SpriteImportMode.Single
+            && Mathf.Approximately(importer.spritePixelsPerUnit, PixelsPerUnitFor(dir))
+            && importer.filterMode == FilterMode.Point
+            && !importer.mipmapEnabled
+            && importer.anisoLevel == 0
+            && importer.textureCompression == TextureImporterCompression.Uncompressed
+            && !importer.crunchedCompression
+            && importer.alphaIsTransparency
+            && importer.wrapMode == TextureWrapMode.Clamp
+            && importer.npotScale == TextureImporterNPOTScale.None
+            && importer.spritePivot == ChoosePivot(dir)
+            && importer.spriteBorder == ChooseBorder(dir, file);
     }
 
     private static void ApplyProfile(string path, TextureImporter importer)
@@ -70,7 +119,7 @@ public static class PixelArtImporter
 
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Single;
-        importer.spritePixelsPerUnit = PixelsPerUnit;
+        importer.spritePixelsPerUnit = PixelsPerUnitFor(dir);
 
         // CRISP: point sampling, no mip chain, no anisotropy, no compression.
         importer.filterMode = FilterMode.Point;
