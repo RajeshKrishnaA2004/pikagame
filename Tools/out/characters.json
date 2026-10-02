@@ -1,0 +1,14 @@
+{
+  "frame_w": 192,
+  "frame_h": 240,
+  "ppu": 192,
+  "cols": 4,
+  "rows": 4,
+  "rows_order": [
+    "Up",
+    "Right",
+    "Left",
+    "Down"
+  ],
+  "note": "4 walk frames per row; rows bottom-up = Down,Left,Right,Up"
+}

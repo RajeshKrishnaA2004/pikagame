@@ -26,3 +26,8 @@
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Headless build / validation output (Unity.exe -logFile ...)
+unity_*.log
+test-results*.xml
+/results.xml

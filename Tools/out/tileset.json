@@ -1,0 +1,89 @@
+{
+  "tile_px": 512,
+  "ppu": 256,
+  "cols": 5,
+  "rows": 2,
+  "tiles": [
+    {
+      "index": 0,
+      "name": "Grass",
+      "col": 0,
+      "row": 0,
+      "x": 0,
+      "y": 512
+    },
+    {
+      "index": 1,
+      "name": "TallGrass",
+      "col": 1,
+      "row": 0,
+      "x": 512,
+      "y": 512
+    },
+    {
+      "index": 2,
+      "name": "Path",
+      "col": 2,
+      "row": 0,
+      "x": 1024,
+      "y": 512
+    },
+    {
+      "index": 3,
+      "name": "Sand",
+      "col": 3,
+      "row": 0,
+      "x": 1536,
+      "y": 512
+    },
+    {
+      "index": 4,
+      "name": "Water",
+      "col": 4,
+      "row": 0,
+      "x": 2048,
+      "y": 512
+    },
+    {
+      "index": 5,
+      "name": "Forest",
+      "col": 0,
+      "row": 1,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "index": 6,
+      "name": "Rock",
+      "col": 1,
+      "row": 1,
+      "x": 512,
+      "y": 0
+    },
+    {
+      "index": 7,
+      "name": "Wall",
+      "col": 2,
+      "row": 1,
+      "x": 1024,
+      "y": 0
+    },
+    {
+      "index": 8,
+      "name": "Floor",
+      "col": 3,
+      "row": 1,
+      "x": 1536,
+      "y": 0
+    },
+    {
+      "index": 9,
+      "name": "Bridge",
+      "col": 4,
+      "row": 1,
+      "x": 2048,
+      "y": 0
+    }
+  ],
+  "ppu_note": "tile is 2 world units"
+}

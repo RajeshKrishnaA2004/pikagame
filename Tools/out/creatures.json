@@ -1,0 +1,198 @@
+{
+  "px": 384,
+  "ppu": 192,
+  "creatures": [
+    {
+      "name": "Cindle",
+      "type": "Flame",
+      "stage": 1,
+      "file": "Cindle.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Cindrake",
+      "type": "Flame",
+      "stage": 2,
+      "file": "Cindrake.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Emberling",
+      "type": "Flame",
+      "stage": 1,
+      "file": "Emberling.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Emberwyrm",
+      "type": "Flame",
+      "stage": 2,
+      "file": "Emberwyrm.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Drippa",
+      "type": "Tide",
+      "stage": 1,
+      "file": "Drippa.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Drippool",
+      "type": "Tide",
+      "stage": 2,
+      "file": "Drippool.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Ripple",
+      "type": "Tide",
+      "stage": 1,
+      "file": "Ripple.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Tidalisk",
+      "type": "Tide",
+      "stage": 2,
+      "file": "Tidalisk.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Mossling",
+      "type": "Leaf",
+      "stage": 1,
+      "file": "Mossling.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Mosshulk",
+      "type": "Leaf",
+      "stage": 2,
+      "file": "Mosshulk.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Sproutle",
+      "type": "Leaf",
+      "stage": 1,
+      "file": "Sproutle.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Sproutree",
+      "type": "Leaf",
+      "stage": 2,
+      "file": "Sproutree.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Pebbit",
+      "type": "Stone",
+      "stage": 1,
+      "file": "Pebbit.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Pebboulder",
+      "type": "Stone",
+      "stage": 2,
+      "file": "Pebboulder.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Shale",
+      "type": "Stone",
+      "stage": 1,
+      "file": "Shale.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Shaleguard",
+      "type": "Stone",
+      "stage": 2,
+      "file": "Shaleguard.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Zapkin",
+      "type": "Spark",
+      "stage": 1,
+      "file": "Zapkin.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Zapzilla",
+      "type": "Spark",
+      "stage": 2,
+      "file": "Zapzilla.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Voltike",
+      "type": "Spark",
+      "stage": 1,
+      "file": "Voltike.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Voltivault",
+      "type": "Spark",
+      "stage": 2,
+      "file": "Voltivault.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Glomoth",
+      "type": "Leaf",
+      "stage": 1,
+      "file": "Glomoth.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Glomothra",
+      "type": "Leaf",
+      "stage": 2,
+      "file": "Glomothra.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Bramble",
+      "type": "Leaf",
+      "stage": 1,
+      "file": "Bramble.png",
+      "px": 384,
+      "ppu": 192
+    },
+    {
+      "name": "Bramblethorn",
+      "type": "Leaf",
+      "stage": 2,
+      "file": "Bramblethorn.png",
+      "px": 384,
+      "ppu": 192
+    }
+  ]
+}
