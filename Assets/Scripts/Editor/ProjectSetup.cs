@@ -118,6 +118,12 @@ public static class ProjectSetup
             if (path.EndsWith(".jpg") || path.EndsWith(".jpeg"))
                 continue;   // MainUi.jpg is left alone
 
+            // The hand-made pixel-art pack has its own importer: this profile
+            // enables mipmaps + bilinear filtering, which blurs pixel art.
+            // See PixelArtImporter.ImportArtPack.
+            if (path.StartsWith("Assets/Art/_Mine"))
+                continue;
+
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null)
                 continue;

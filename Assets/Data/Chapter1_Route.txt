@@ -1,0 +1,39 @@
+// CHAPTER 1 ROUTE - text layout for MapBuilder.
+// Lines starting with "//" and blank lines are ignored.
+// Every data row MUST be the same width (24) and there must be 18 rows.
+//
+// LEGEND
+//   .  grass            (walkable)
+//   ,  tall grass       (walkable, decoration only - no encounters)
+//   =  brick path       (walkable)
+//   ~  shallow water    (BLOCKING)
+//   #  hedge            (BLOCKING)
+//   T  tree             (BLOCKING, sprite from Environment/Trees)
+//   Y  pine             (BLOCKING, sprite from Environment/Trees)
+//   h  house            (BLOCKING, sprite from Environment/Buildings)
+//   f  fence            (BLOCKING, sprite from Environment/Props)
+//   m  mailbox          (BLOCKING, sprite from Environment/Props)
+//   G  gym              (BLOCKING, sprite from Environment/Buildings)
+//   n  NPC              (BLOCKING, sprite stand-in)
+//   @  player spawn     (walkable)
+//
+// The gym door is the tile directly BELOW the 'G' (row 2, col 11).
+// ValidateStage1 asserts a fully connected walkable path from '@' to that door.
+TTTTTTTTTTTTTTTTTTTTTTTT
+TYT..YT....G.....TY..TYT
+TT..#####..=..#####..TTT
+T,,.#,,,#..=..#,,,#..,,T
+T,,.#,,,#..=..#,,,#..,,T
+TY..#####..=..#####..mYT
+T..........=..........TT
+T..h..f=======f....h..YT
+T.....f=..f==f..=..m..TT
+TY,,..f=.,,,,,.f=..,,.YT
+T,,,..f=.~~~~..f=..,,,TT
+T.....f==~~~~==f=..n...T
+T..Y..ff.~~~~.ff=..Y...T
+TT....=====......=.....T
+T,,..=.....####..=..,,.T
+T,,.=......#,,#..====..T
+TY.==..n...####.....==.T
+TT@=.....Y......YT....TT
