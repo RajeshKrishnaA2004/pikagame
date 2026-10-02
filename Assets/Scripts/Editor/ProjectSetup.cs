@@ -1230,6 +1230,71 @@ public static class ProjectSetup
         return n;
     }
 
+    /// <summary>Render a camera straight to a PNG. Works in -batchmode (no Game view).</summary>
+    private static string RenderCamToPng(Camera cam, int w, int h, string relativePath)
+    {
+        var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
+        rt.Create();
+
+        RenderTexture prevTarget = cam.targetTexture;
+        bool prevAllowMsaa = cam.allowMSAA;
+        cam.targetTexture = rt;
+        cam.allowMSAA = false;
+        cam.Render();
+        cam.targetTexture = prevTarget;
+        cam.allowMSAA = prevAllowMsaa;
+
+        var prevActive = RenderTexture.active;
+        RenderTexture.active = rt;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        tex.Apply();
+        RenderTexture.active = prevActive;
+        rt.Release();
+
+        byte[] png = tex.EncodeToPNG();
+        Object.DestroyImmediate(tex);
+
+        string abs = Path.GetFullPath(Path.Combine(Application.dataPath, "../" + relativePath));
+        Directory.CreateDirectory(Path.GetDirectoryName(abs));
+        File.WriteAllBytes(abs, png);
+        Debug.Log("[ProjectSetup] wrote " + abs + " (" + png.Length + " bytes)");
+        return abs;
+    }
+
+    /// <summary>
+    /// Still frame of the world camera and the minimap, straight from the scene
+    /// as it would look at spawn. Note: Screen Space Overlay UI (the HUD) is not
+    /// drawn into a camera RenderTexture, so these show the world only.
+    /// </summary>
+    [MenuItem("Tools/PikaGame/7. Capture Preview PNG")]
+    public static void CapturePreview()
+    {
+        var scene = EditorSceneManager.OpenScene(OverworldScene, OpenSceneMode.Single);
+
+        Camera world = null, mini = null;
+        foreach (var c in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
+        {
+            if (c.CompareTag("MainCamera")) world = c;
+            else if (c.targetTexture != null) mini = c;
+        }
+
+        if (world == null)
+        {
+            Debug.LogError("[ProjectSetup] no MainCamera in " + scene.name);
+            return;
+        }
+
+        RenderCamToPng(world, 1600, 900, "Tools/out/preview_world.png");
+
+        if (mini != null)
+            RenderCamToPng(mini, 768, 768, "Tools/out/preview_minimap.png");
+        else
+            Debug.LogWarning("[ProjectSetup] no minimap camera found");
+
+        AssetDatabase.Refresh();
+    }
+
     /// <summary>
     /// Headless self-check:
     /// Unity.exe -batchmode -quit -projectPath &lt;proj&gt;
