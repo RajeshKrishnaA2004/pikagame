@@ -1357,6 +1357,7 @@ public static class ProjectSetup
         ValidateCamera(player);
         ValidateHud(player);
         ValidateRegionsAndGates();
+        ValidateSorting();
 
         Debug.Log("[Validate] scene '" + scene.name + "': " + failures + " failure(s)");
         if (failures > 0)
@@ -1436,6 +1437,35 @@ public static class ProjectSetup
               Object.FindFirstObjectByType<EventSystem>() != null);
         Check("GameState present",
               Object.FindFirstObjectByType<GameState>() != null);
+    }
+
+    /// <summary>
+    /// Regression guard for a bug that hid the player and every prop: SpriteYSort
+    /// subtracted (y * step) from a base that was too small, so anything above
+    /// y ~3.75 got a NEGATIVE sorting order and drew behind the terrain tilemap.
+    /// </summary>
+    private static void ValidateSorting()
+    {
+        int groundOrder = 0;
+        var ground = GameObject.Find("Ground");
+        var gr = ground != null ? ground.GetComponent<TilemapRenderer>() : null;
+        if (gr != null)
+            groundOrder = gr.sortingOrder;
+        Check("Terrain tilemap sits at sorting order " + groundOrder, groundOrder == 0);
+
+        var sorters = Object.FindObjectsByType<SpriteYSort>(FindObjectsSortMode.None);
+        Check("SpriteYSort on sprites (" + sorters.Length + ")", sorters.Length > 100);
+
+        int worst = int.MaxValue;
+        foreach (var ys in sorters)
+        {
+            // Lowest order this component can produce anywhere on the map.
+            int lowest = ys.baseOrder -
+                         Mathf.CeilToInt(WorldBounds.yMax * ys.unitsPerStep);
+            worst = Mathf.Min(worst, lowest);
+        }
+        Check("Worst-case Y-sort order (" + worst + ") stays above terrain (" +
+              groundOrder + ")", worst > groundOrder);
     }
 
     private static void ValidateRegionsAndGates()
