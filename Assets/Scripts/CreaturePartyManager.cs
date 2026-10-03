@@ -1,59 +1,63 @@
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class CreaturePartyManager : MonoBehaviour
 {
-    [Header("Party Slots")]
+    [Header("Main Pokémon Slots")]
     public Image starterSlot;
-    public Image activeSlot;
+    public Image capturedSlot;
 
-    [Header("Bag")]
+    [Header("Backpack Display")]
     public GameObject bagPanel;
-    public Image[] bagSlotImages;
-    public Button[] bagSlotButtons;
+    public Image starterImage;
+    public Image activeImage;
 
-    [Header("Bag Actions")]
-    public Button swapButton;
-    public Button sellButton;
-    public int sellValue = 10;
+    [Header("Backpack Slots")]
+    public Image[] backpackSlotImages;
+    public Button[] backpackSlotButtons;
+    public Button moveToActiveButton;
 
     [Header("Creature Database")]
     public CreatureData[] creatureDatabase;
 
-    private const int BagCapacity = 5;
-    private const string ActiveKey = "Party_Active";
-    private const string BagKey = "Party_Bag";
+    private const int BackpackCapacity = 5;
 
-    private string activeCreature = "";
-    private List<string> bag = new List<string>();
+    private const string StarterKey = "StarterCreature";
+    private const string CapturedKey = "Party_Captured";
+    private const string BackpackKey = "Party_Bag";
+
+    private string capturedCreature = "";
+    private List<string> backpack = new List<string>();
+
     private int selectedSlot = -1;
-
     void Start()
     {
-        LoadParty();
+        capturedCreature = "";
+        backpack.Clear();
 
         if (bagPanel != null)
             bagPanel.SetActive(false);
 
-        if (bagSlotButtons != null)
+        if (backpackSlotButtons != null)
         {
-            for (int i = 0; i < bagSlotButtons.Length; i++)
+            for (int i = 0; i < backpackSlotButtons.Length; i++)
             {
                 int index = i;
 
-                if (bagSlotButtons[i] != null)
-                    bagSlotButtons[i].onClick.AddListener(
-                        () => SelectBagSlot(index));
+                if (backpackSlotButtons[i] != null)
+                {
+                    backpackSlotButtons[i].onClick.AddListener(
+                        () => SelectBackpackSlot(index));
+                }
             }
         }
 
-        if (swapButton != null)
-            swapButton.onClick.AddListener(SwapCreature);
-
-        if (sellButton != null)
-            sellButton.onClick.AddListener(SellCreature);
+        if (moveToActiveButton != null)
+        {
+            moveToActiveButton.onClick.AddListener(
+                MoveSelectedToActiveSlot);
+        }
 
         RefreshUI();
     }
@@ -61,134 +65,217 @@ public class CreaturePartyManager : MonoBehaviour
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.E) && bagPanel != null)
+        {
             bagPanel.SetActive(!bagPanel.activeSelf);
+            RefreshUI();
+        }
     }
 
     void LoadParty()
     {
-        activeCreature = PlayerPrefs.GetString(ActiveKey, "");
-        bag.Clear();
-
-        string savedBag = PlayerPrefs.GetString(BagKey, "");
-
-        if (!string.IsNullOrEmpty(savedBag))
-            bag.AddRange(savedBag.Split('\n'));
+        capturedCreature = "";
+        backpack.Clear();
     }
 
     void SaveParty()
     {
-        PlayerPrefs.SetString(ActiveKey, activeCreature);
-        PlayerPrefs.SetString(BagKey, string.Join("\n", bag));
+        PlayerPrefs.SetString(CapturedKey, capturedCreature);
+        PlayerPrefs.SetString(
+            BackpackKey,
+            string.Join("\n", backpack));
+
         PlayerPrefs.Save();
     }
 
-    CreatureData FindCreature(string name)
+    CreatureData FindCreature(string creatureName)
     {
         if (creatureDatabase == null)
             return null;
 
         foreach (CreatureData creature in creatureDatabase)
         {
-            if (creature != null && creature.creatureName == name)
+            if (creature != null &&
+                creature.creatureName == creatureName)
+            {
                 return creature;
+            }
         }
 
         return null;
     }
 
-    void SetSlotImage(Image slot, string name)
+    void SetSlotImage(Image slot, string creatureName)
     {
         if (slot == null)
             return;
 
-        CreatureData creature = FindCreature(name);
-        slot.sprite = creature != null ? creature.battleSprite : null;
-        slot.enabled = true;
+        CreatureData creature = FindCreature(creatureName);
+
+        slot.sprite = creature != null
+            ? creature.battleSprite
+            : null;
+
+        slot.enabled = creature != null;
         slot.preserveAspect = true;
     }
 
     void RefreshUI()
     {
-        SetSlotImage(starterSlot,
-            PlayerPrefs.GetString("StarterCreature", ""));
+        string starter = PlayerPrefs.GetString(StarterKey, "");
 
-        SetSlotImage(activeSlot, activeCreature);
+        // Main screen slots
+        SetSlotImage(starterSlot, starter);
 
-        if (bagSlotImages != null)
+        bool hasCaptured =
+            !string.IsNullOrEmpty(capturedCreature);
+
+        if (capturedSlot != null)
         {
-            for (int i = 0; i < bagSlotImages.Length; i++)
+            SetSlotImage(capturedSlot, capturedCreature);
+
+            capturedSlot.gameObject.SetActive(hasCaptured);
+        }
+
+        // Big backpack display
+        SetSlotImage(starterImage, starter);
+        SetSlotImage(activeImage, capturedCreature);
+
+        // Backpack slots
+        if (backpackSlotImages != null)
+        {
+            for (int i = 0; i < backpackSlotImages.Length; i++)
             {
-                string name = i < bag.Count ? bag[i] : "";
-                SetSlotImage(bagSlotImages[i], name);
+                string creatureName =
+                    i < backpack.Count
+                    ? backpack[i]
+                    : "";
+
+                SetSlotImage(
+                    backpackSlotImages[i],
+                    creatureName);
             }
         }
 
-        bool validSelection = selectedSlot >= 0 &&
-                              selectedSlot < bag.Count;
+        // Backpack slot buttons
+        if (backpackSlotButtons != null)
+        {
+            for (int i = 0; i < backpackSlotButtons.Length; i++)
+            {
+                if (backpackSlotButtons[i] != null)
+                {
+                    backpackSlotButtons[i].interactable =
+                        i < backpack.Count;
+                }
+            }
+        }
 
-        if (swapButton != null)
-            swapButton.interactable = validSelection;
+        bool validSelection =
+            selectedSlot >= 0 &&
+            selectedSlot < backpack.Count;
 
-        if (sellButton != null)
-            sellButton.interactable = validSelection;
+        if (moveToActiveButton != null)
+        {
+            moveToActiveButton.interactable =
+                validSelection;
+        }
     }
 
-    public bool AddCapturedCreature(string name)
+    // Capture:
+    // 1st wild Pokémon -> active slot
+    // Next 5 -> backpack
+    public bool AddCapturedCreature(string creatureName)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (string.IsNullOrWhiteSpace(creatureName))
             return false;
 
-        if (string.IsNullOrEmpty(activeCreature))
-            activeCreature = name;
-        else if (bag.Count < BagCapacity)
-            bag.Add(name);
-        else
+        if (FindCreature(creatureName) == null)
             return false;
+
+        if (string.IsNullOrEmpty(capturedCreature))
+        {
+            capturedCreature = creatureName;
+        }
+        else if (backpack.Count < BackpackCapacity)
+        {
+            backpack.Add(creatureName);
+        }
+        else
+        {
+            return false;
+        }
 
         SaveParty();
         RefreshUI();
+
         return true;
     }
 
-    void SelectBagSlot(int index)
+    void SelectBackpackSlot(int index)
     {
-        if (index < 0 || index >= bag.Count)
+        if (index < 0 || index >= backpack.Count)
             return;
 
         selectedSlot = index;
+
         RefreshUI();
     }
 
-    void SwapCreature()
+    // Move selected backpack Pokémon into active slot.
+    // The old active Pokémon moves into the selected backpack slot.
+    public void MoveSelectedToActiveSlot()
     {
-        if (selectedSlot < 0 || selectedSlot >= bag.Count)
+        if (selectedSlot < 0 ||
+            selectedSlot >= backpack.Count)
             return;
 
-        string selected = bag[selectedSlot];
-        bag.RemoveAt(selectedSlot);
+        string selectedCreature =
+            backpack[selectedSlot];
 
-        if (!string.IsNullOrEmpty(activeCreature))
-            bag.Insert(selectedSlot, activeCreature);
+        if (string.IsNullOrEmpty(capturedCreature))
+        {
+            capturedCreature = selectedCreature;
 
-        activeCreature = selected;
+            backpack.RemoveAt(selectedSlot);
+        }
+        else
+        {
+            backpack[selectedSlot] =
+                capturedCreature;
+
+            capturedCreature =
+                selectedCreature;
+        }
+
         selectedSlot = -1;
 
         SaveParty();
         RefreshUI();
     }
 
-    void SellCreature()
+    // Permanently release the active wild Pokémon.
+    public string ReleaseCapturedCreature()
     {
-        if (selectedSlot < 0 || selectedSlot >= bag.Count)
-            return;
+        if (string.IsNullOrEmpty(capturedCreature))
+            return "";
 
-        bag.RemoveAt(selectedSlot);
+        string releasedCreature =
+            capturedCreature;
 
-        int coins = PlayerPrefs.GetInt("Coins", 0) + sellValue;
-        PlayerPrefs.SetInt("Coins", coins);
+        capturedCreature = "";
 
-        selectedSlot = -1;
         SaveParty();
         RefreshUI();
+
+        return releasedCreature;
+    }
+
+    public bool HasCapturedCreature()
+    {
+        return !string.IsNullOrEmpty(capturedCreature);
+    }
+
+    public string GetActiveCreatureName()
+    {
+        return capturedCreature;
     }
 }
